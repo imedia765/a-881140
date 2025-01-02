@@ -7,14 +7,21 @@ interface TotalCountItem {
 }
 
 interface TotalCountProps {
-  items: TotalCountItem[];
+  items?: TotalCountItem[];
+  // Support for legacy props
+  count?: number;
+  label?: string;
+  icon?: React.ReactNode;
 }
 
-const TotalCount = ({ items }: TotalCountProps) => {
+const TotalCount = ({ items, count, label, icon }: TotalCountProps) => {
+  // If legacy props are provided, convert them to items format
+  const displayItems = items || (count !== undefined ? [{ count, label: label || '', icon }] : []);
+
   return (
     <div className="glass-card p-4 mb-6">
       <div className="flex items-center gap-8">
-        {items.map((item, index) => (
+        {displayItems.map((item, index) => (
           <div key={index} className="flex items-center gap-3">
             {item.icon}
             <div>

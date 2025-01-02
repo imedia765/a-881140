@@ -115,9 +115,11 @@ const Index = () => {
               <p className="text-dashboard-muted">View and manage member information</p>
             </header>
             <TotalCount 
-              count={filteredMembers?.length || 0}
-              label="Total Members"
-              icon={<Users className="w-6 h-6 text-blue-400" />}
+              items={[{
+                count: filteredMembers?.length || 0,
+                label: "Total Members",
+                icon: <Users className="w-6 h-6 text-blue-400" />
+              }]}
             />
             <MemberSearch 
               searchTerm={searchTerm}
@@ -176,9 +178,11 @@ const Index = () => {
               <p className="text-dashboard-muted">View all collectors and their assigned members</p>
             </header>
             <TotalCount 
-              count={collectors?.length || 0}
-              label="Total Collectors"
-              icon={<UserCheck className="w-6 h-6 text-purple-400" />}
+              items={[{
+                count: collectors?.length || 0,
+                label: "Total Collectors",
+                icon: <UserCheck className="w-6 h-6 text-purple-400" />
+              }]}
             />
             <CollectorsList />
           </>
