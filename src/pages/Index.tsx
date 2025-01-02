@@ -8,69 +8,24 @@ import CollectorsList from '@/components/CollectorsList';
 import SidePanel from '@/components/SidePanel';
 import TotalCount from '@/components/TotalCount';
 import MemberSearch from '@/components/MemberSearch';
+import MembersList from '@/components/MembersList';
 import { useState } from 'react';
 import { Switch } from "@/components/ui/switch";
 import { Bell, Globe, Users, UserCheck } from 'lucide-react';
 
-const MEMBERS_PER_PAGE = 10;
-
 const Index = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [searchTerm, setSearchTerm] = useState('');
-  const [currentPage, setCurrentPage] = useState(0);
 
-  const { data: membersData, isLoading: membersLoading, error: membersError } = useQuery({
-    queryKey: ['members', currentPage, searchTerm],
+  const { data: membersData } = useQuery({
+    queryKey: ['members_count'],
     queryFn: async () => {
-      console.log('Fetching members...');
-      let query = supabase
+      const { count } = await supabase
         .from('members')
-        .select('*', { count: 'exact' });
+        .select('*', { count: 'exact', head: true });
       
-      if (searchTerm) {
-        query = query.or(`full_name.ilike.%${searchTerm}%,member_number.ilike.%${searchTerm}%,collector.ilike.%${searchTerm}%`);
-      }
-      
-      const { data, count, error } = await query
-        .order('created_at', { ascending: false })
-        .range(currentPage * MEMBERS_PER_PAGE, (currentPage + 1) * MEMBERS_PER_PAGE - 1)
-        .throwOnError();
-      
-      if (error) {
-        console.error('Error fetching members:', error);
-        throw error;
-      }
-      
-      console.log('Fetched members count:', count);
-      return { 
-        members: data as Tables<'members'>[], 
-        totalCount: count || 0 
-      };
+      return { totalCount: count || 0 };
     },
-  });
-
-  const { data: collectors } = useQuery({
-    queryKey: ['members_collectors'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('members_collectors')
-        .select('*')
-        .throwOnError();
-      
-      if (error) throw error;
-      return data;
-    },
-  });
-
-  const filteredMembers = membersData?.members?.filter(member => {
-    if (!searchTerm) return true;
-    
-    const searchLower = searchTerm.toLowerCase();
-    return (
-      member.full_name?.toLowerCase().includes(searchLower) ||
-      member.member_number?.toLowerCase().includes(searchLower) ||
-      member.collector?.toLowerCase().includes(searchLower)
-    );
   });
 
   const renderContent = () => {
@@ -116,7 +71,7 @@ const Index = () => {
             </header>
             <TotalCount 
               items={[{
-                count: filteredMembers?.length || 0,
+                count: membersData?.totalCount || 0,
                 label: "Total Members",
                 icon: <Users className="w-6 h-6 text-blue-400" />
               }]}
@@ -125,49 +80,7 @@ const Index = () => {
               searchTerm={searchTerm}
               onSearchChange={setSearchTerm}
             />
-            <div className="space-y-4">
-              {membersLoading ? (
-                <div className="text-center py-4">Loading members...</div>
-              ) : membersError ? (
-                <div className="text-center py-4 text-red-500">Error loading members: {membersError.message}</div>
-              ) : filteredMembers && filteredMembers.length > 0 ? (
-                <div className="grid gap-4">
-                  {filteredMembers.map((member) => (
-                    <div 
-                      key={member.id} 
-                      className="bg-dashboard-card p-4 rounded-lg border border-white/10 hover:border-white/20 transition-all duration-300"
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-full bg-dashboard-accent1 flex items-center justify-center text-white">
-                            {member.full_name?.charAt(0) || 'M'}
-                          </div>
-                          <div>
-                            <p className="font-medium text-white">{member.full_name}</p>
-                            <p className="text-sm text-dashboard-text">{member.email || 'No email provided'}</p>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-4">
-                          <div className="flex flex-col items-end">
-                            <span className="text-sm font-medium text-white">Member #{member.member_number}</span>
-                            <span className="text-sm text-dashboard-text">{member.membership_type || 'Standard'}</span>
-                          </div>
-                          <div className={`px-2 py-1 rounded-full text-xs ${
-                            member.status === 'active' 
-                              ? 'bg-green-500/20 text-green-500' 
-                              : 'bg-gray-500/20 text-gray-400'
-                          }`}>
-                            {member.status || 'Pending'}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-4">No members found</div>
-              )}
-            </div>
+            <MembersList searchTerm={searchTerm} />
           </>
         );
       case 'collectors':
@@ -177,13 +90,6 @@ const Index = () => {
               <h1 className="text-3xl font-medium mb-2">Collectors</h1>
               <p className="text-dashboard-muted">View all collectors and their assigned members</p>
             </header>
-            <TotalCount 
-              items={[{
-                count: collectors?.length || 0,
-                label: "Total Collectors",
-                icon: <UserCheck className="w-6 h-6 text-purple-400" />
-              }]}
-            />
             <CollectorsList />
           </>
         );
