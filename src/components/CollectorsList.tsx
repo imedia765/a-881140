@@ -144,8 +144,16 @@ const CollectorsList = () => {
   return (
     <div className="space-y-4">
       <TotalCount 
-        count={totalMembers}
-        label="Total Members"
+        items={[
+          {
+            count: totalMembers,
+            label: "Total Members",
+          },
+          {
+            count: collectors.length,
+            label: "Total Collectors",
+          }
+        ]}
       />
       <div className="flex justify-end mb-4">
         <Button 
