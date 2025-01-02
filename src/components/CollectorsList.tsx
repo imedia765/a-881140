@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from "@/integrations/supabase/client";
 import { Database } from '@/integrations/supabase/types';
-import { UserCheck, User, Printer } from 'lucide-react';
+import { UserCheck, User, Printer, Users } from 'lucide-react';
 import {
   Accordion,
   AccordionContent,
@@ -148,10 +148,12 @@ const CollectorsList = () => {
           {
             count: totalMembers,
             label: "Total Members",
+            icon: <Users className="w-6 h-6 text-blue-400" />
           },
           {
             count: collectors.length,
             label: "Total Collectors",
+            icon: <UserCheck className="w-6 h-6 text-purple-400" />
           }
         ]}
       />
