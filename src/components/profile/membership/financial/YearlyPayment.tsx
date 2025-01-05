@@ -15,11 +15,13 @@ const YearlyPayment = ({ memberProfile }: YearlyPaymentProps) => {
 
   const formatDueDate = (date: string | null) => {
     if (!date) return 'January 1st (Annually)';
+    const day = new Date(date).getDate();
+    const suffix = ['st', 'nd', 'rd'][((day + 90) % 100 - 11) % 10 - 1] || 'th';
     const formattedDate = new Date(date).toLocaleDateString('en-GB', {
       month: 'long',
       day: 'numeric'
     });
-    return `${formattedDate} (Annually)`;
+    return `${formattedDate.replace(/\d+/, day + suffix)} (Annually)`;
   };
 
   return (
