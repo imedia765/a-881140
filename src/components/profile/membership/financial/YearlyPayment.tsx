@@ -13,6 +13,15 @@ const YearlyPayment = ({ memberProfile }: YearlyPaymentProps) => {
   const yearlyAmount = memberProfile?.yearly_payment_amount || 40;
   const defaultDueDate = '2025-01-01'; // Set to January 1st, 2025
 
+  const formatDueDate = (date: string | null) => {
+    if (!date) return 'January 1st (Annually)';
+    const formattedDate = new Date(date).toLocaleDateString('en-GB', {
+      month: 'long',
+      day: 'numeric'
+    });
+    return `${formattedDate} (Annually)`;
+  };
+
   return (
     <div className="space-y-2 bg-white/5 p-6 rounded-lg border border-white/10 hover:border-dashboard-accent1/30 transition-all duration-300">
       <h4 className="font-medium text-dashboard-accent2 flex items-center gap-2 mb-4 text-lg">
@@ -31,7 +40,7 @@ const YearlyPayment = ({ memberProfile }: YearlyPaymentProps) => {
         <div className="flex items-center justify-between">
           <span className="text-dashboard-muted">Due Date:</span>
           <span className="text-dashboard-text text-lg">
-            {memberProfile?.yearly_payment_due_date || 'January 1st, 2025'}
+            {formatDueDate(memberProfile?.yearly_payment_due_date || defaultDueDate)}
           </span>
         </div>
         
