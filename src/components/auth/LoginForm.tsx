@@ -15,12 +15,14 @@ const LoginForm = () => {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (loading) return; // Prevent multiple submissions
+    
     setLoading(true);
+    console.log('Starting login process on device type:', window.innerWidth <= 768 ? 'mobile' : 'desktop');
 
     try {
-      console.log('Starting login process for member:', memberNumber);
-      
       // First, verify member exists
+      console.log('Verifying member:', memberNumber);
       const { data: members, error: memberError } = await supabase
         .from('members')
         .select('id, member_number')
@@ -53,7 +55,7 @@ const LoginForm = () => {
 
       // If sign in fails due to invalid credentials, try to sign up
       if (signInError && signInError.message === 'Invalid login credentials') {
-        console.log('Attempting signup for new user');
+        console.log('Sign in failed, attempting signup');
         
         const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
           email,
@@ -71,6 +73,8 @@ const LoginForm = () => {
         }
 
         if (signUpData.user) {
+          console.log('Signup successful, updating member with auth_user_id');
+          
           // Update member with auth_user_id
           const { error: updateError } = await supabase
             .from('members')
@@ -82,7 +86,7 @@ const LoginForm = () => {
             throw updateError;
           }
 
-          console.log('Signup successful, attempting final sign in');
+          console.log('Member updated, attempting final sign in');
           
           // Final sign in attempt after successful signup
           const { data: finalSignInData, error: finalSignInError } = await supabase.auth.signInWithPassword({
@@ -95,20 +99,30 @@ const LoginForm = () => {
             throw finalSignInError;
           }
 
-          // Verify session is established
           if (!finalSignInData?.session) {
-            throw new Error('Failed to establish session');
+            throw new Error('Failed to establish session after signup');
           }
         }
       } else if (signInError) {
+        console.error('Sign in error:', signInError);
         throw signInError;
       }
 
-      // Verify session after sign in
-      const { data: { session } } = await supabase.auth.getSession();
+      // Verify session is established
+      console.log('Verifying session...');
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      
+      if (sessionError) {
+        console.error('Session verification error:', sessionError);
+        throw sessionError;
+      }
+
       if (!session) {
+        console.error('No session established');
         throw new Error('Failed to establish session');
       }
+
+      console.log('Session established successfully');
 
       // Invalidate all queries to refresh data
       await queryClient.invalidateQueries();
@@ -118,7 +132,8 @@ const LoginForm = () => {
         description: "Welcome back!",
       });
 
-      navigate('/');
+      // Use replace to prevent back button issues on mobile
+      navigate('/', { replace: true });
     } catch (error: any) {
       console.error('Login error:', error);
       // Clear any existing session
@@ -126,7 +141,7 @@ const LoginForm = () => {
       
       toast({
         title: "Login failed",
-        description: error.message,
+        description: error.message || 'An unexpected error occurred',
         variant: "destructive",
       });
     } finally {
@@ -149,6 +164,7 @@ const LoginForm = () => {
             placeholder="Enter your member number"
             className="w-full"
             required
+            disabled={loading}
           />
         </div>
 
