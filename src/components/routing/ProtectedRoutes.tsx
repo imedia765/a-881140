@@ -31,6 +31,15 @@ const ProtectedRoutes = ({ session }: ProtectedRoutesProps) => {
     return () => window.removeEventListener('error', handleError);
   }, [toast]);
 
+  // Get the current pathname
+  const pathname = window.location.pathname;
+
+  // If we're not on a valid route, redirect to home or login
+  if (pathname !== '/' && pathname !== '/login') {
+    console.log('Invalid route detected, redirecting...');
+    return <Navigate to={session ? "/" : "/login"} replace />;
+  }
+
   return (
     <BrowserRouter basename="/">
       <Routes>
