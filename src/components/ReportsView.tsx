@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Download, Loader2 } from "lucide-react";
 import { useState } from "react";
+import { Database } from "@/integrations/supabase/types";
 
 type TableInfo = {
   name: string;
@@ -13,9 +14,12 @@ type TableInfo = {
   rls_enabled: boolean;
 };
 
+// Define valid table names from the Database type
+type ValidTableNames = keyof Database['public']['Tables'];
+
 const ReportsView = () => {
   const { toast } = useToast();
-  const [selectedTable, setSelectedTable] = useState<string | null>(null);
+  const [selectedTable, setSelectedTable] = useState<ValidTableNames | null>(null);
   
   // Query to get table information
   const { data: tables, isLoading: loadingTables } = useQuery({
@@ -32,8 +36,9 @@ const ReportsView = () => {
     queryKey: ['table-data', selectedTable],
     enabled: !!selectedTable,
     queryFn: async () => {
+      if (!selectedTable) return null;
       const { data, error } = await supabase
-        .from(selectedTable!)
+        .from(selectedTable)
         .select('*')
         .limit(100);
       if (error) throw error;
@@ -79,6 +84,11 @@ const ReportsView = () => {
     }
   };
 
+  const handleTableSelect = (tableName: string) => {
+    // Type assertion here is safe because we know the table names come from the database
+    setSelectedTable(tableName as ValidTableNames);
+  };
+
   return (
     <div className="space-y-6">
       <header className="mb-8">
@@ -99,7 +109,7 @@ const ReportsView = () => {
                 <Button
                   key={table.name}
                   variant={selectedTable === table.name ? "default" : "outline"}
-                  onClick={() => setSelectedTable(table.name)}
+                  onClick={() => handleTableSelect(table.name)}
                   className="w-full"
                 >
                   {table.name}
