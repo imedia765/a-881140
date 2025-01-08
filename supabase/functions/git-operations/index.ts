@@ -12,36 +12,45 @@ interface GitOperationRequest {
 }
 
 serve(async (req) => {
+  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders })
+    return new Response(null, { headers: corsHeaders });
   }
 
   try {
+    console.log('Git operation started');
+    
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
 
-    const authHeader = req.headers.get('Authorization')
+    // Verify authentication
+    const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
-      throw new Error('No authorization header')
+      console.error('No authorization header provided');
+      throw new Error('No authorization header');
     }
 
     const { data: { user }, error: authError } = await supabaseClient.auth.getUser(
       authHeader.replace('Bearer ', '')
-    )
+    );
 
     if (authError || !user) {
-      throw new Error('Invalid token')
+      console.error('Auth error:', authError);
+      throw new Error('Invalid token');
     }
+
+    console.log('User authenticated:', user.id);
 
     // Get GitHub token from secrets
-    const githubToken = Deno.env.get('GITHUB_PAT')
+    const githubToken = Deno.env.get('GITHUB_PAT');
     if (!githubToken) {
-      throw new Error('GitHub token not configured')
+      console.error('GitHub token not configured');
+      throw new Error('GitHub token not configured');
     }
 
-    const { branch = 'main', commitMessage = 'Force commit: Pushing all files to master' } = await req.json() as GitOperationRequest
+    const { branch = 'main', commitMessage = 'Force commit: Pushing all files to master' } = await req.json() as GitOperationRequest;
 
     // Log operation start
     const { data: logEntry, error: logError } = await supabaseClient
@@ -53,42 +62,47 @@ serve(async (req) => {
         message: 'Starting Git push operation'
       })
       .select()
-      .single()
+      .single();
 
     if (logError) {
-      console.error('Error logging operation:', logError)
+      console.error('Error logging operation:', logError);
     }
 
     // GitHub API endpoint
-    const repoOwner = 'imedia765'
-    const repoName = 's-935078'
-    const apiUrl = `https://api.github.com/repos/${repoOwner}/${repoName}/git/refs/heads/${branch}`
+    const repoOwner = 'imedia765';
+    const repoName = 's-935078';
+    const apiUrl = `https://api.github.com/repos/${repoOwner}/${repoName}/git/refs/heads/${branch}`;
 
-    console.log('Fetching current branch state...')
+    console.log('Fetching current branch state...');
     
     // Get the latest commit SHA
     const response = await fetch(apiUrl, {
       headers: {
         'Authorization': `token ${githubToken}`,
-        'Accept': 'application/vnd.github.v3+json'
+        'Accept': 'application/vnd.github.v3+json',
+        'User-Agent': 'Supabase-Edge-Function'
       }
-    })
+    });
 
     if (!response.ok) {
-      throw new Error(`GitHub API error: ${response.statusText}`)
+      const errorText = await response.text();
+      console.error('GitHub API error:', errorText);
+      throw new Error(`GitHub API error: ${response.statusText}`);
     }
 
-    const data = await response.json()
-    console.log('Current branch state:', data)
+    const data = await response.json();
+    console.log('Current branch state:', data);
 
     // Update log with success
-    await supabaseClient
-      .from('git_operations_logs')
-      .update({
-        status: 'completed',
-        message: `Successfully pushed to ${branch}`
-      })
-      .eq('id', logEntry?.id)
+    if (logEntry?.id) {
+      await supabaseClient
+        .from('git_operations_logs')
+        .update({
+          status: 'completed',
+          message: `Successfully pushed to ${branch}`
+        })
+        .eq('id', logEntry.id);
+    }
 
     return new Response(
       JSON.stringify({
@@ -100,9 +114,9 @@ serve(async (req) => {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 200,
       }
-    )
+    );
   } catch (error) {
-    console.error('Error:', error)
+    console.error('Error in git-operations:', error);
 
     // Log the error
     if (error instanceof Error) {
@@ -112,18 +126,18 @@ serve(async (req) => {
           operation_type: 'push',
           status: 'failed',
           message: error.message
-        })
+        });
     }
 
     return new Response(
       JSON.stringify({
         success: false,
-        error: error.message
+        error: error instanceof Error ? error.message : 'Unknown error occurred'
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 400,
       }
-    )
+    );
   }
-})
+});
