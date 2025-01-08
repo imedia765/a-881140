@@ -48,7 +48,13 @@ serve(async (req) => {
     const githubToken = Deno.env.get('GITHUB_PAT');
     if (!githubToken) {
       console.error('GitHub token not configured');
-      throw new Error('GitHub token not configured');
+      throw new Error('GitHub token not configured in Edge Function secrets');
+    }
+
+    // Validate GitHub token format
+    if (!githubToken.startsWith('ghp_') && !githubToken.startsWith('github_pat_')) {
+      console.error('Invalid GitHub token format');
+      throw new Error('Invalid GitHub PAT format. Token should start with "ghp_" or "github_pat_"');
     }
 
     const { branch = 'main', commitMessage = 'Force commit: Pushing all files to master' } = await req.json() as GitOperationRequest;
@@ -74,6 +80,21 @@ serve(async (req) => {
 
     console.log('Fetching current branch state...');
     
+    // Test GitHub token with a simple API call first
+    const testResponse = await fetch('https://api.github.com/user', {
+      headers: {
+        'Authorization': `token ${githubToken}`,
+        'Accept': 'application/vnd.github.v3+json',
+        'User-Agent': 'Supabase-Edge-Function'
+      }
+    });
+
+    if (!testResponse.ok) {
+      const testErrorText = await testResponse.text();
+      console.error('GitHub token validation failed:', testErrorText);
+      throw new Error('GitHub token validation failed. Please check your PAT permissions.');
+    }
+
     // Get the latest commit SHA
     const response = await fetch(apiUrl, {
       headers: {
