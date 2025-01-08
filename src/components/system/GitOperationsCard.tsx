@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
-import { GitBranch, AlertCircle, History } from 'lucide-react';
+import { GitBranch, AlertCircle } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Progress } from "@/components/ui/progress";
 import { supabase } from "@/integrations/supabase/client";
+import { GitOperationProgress } from './git/GitOperationProgress';
+import { GitOperationLogs } from './git/GitOperationLogs';
 
 interface GitOperationLog {
   id: string;
@@ -52,11 +52,34 @@ const GitOperationsCard = () => {
     }
   };
 
+  const logOperation = async (status: string, message: string) => {
+    try {
+      const { error } = await supabase
+        .from('git_operations_logs')
+        .insert({
+          operation_type: 'push',
+          status,
+          message
+        });
+
+      if (error) {
+        console.error('Error logging operation:', error);
+      }
+      
+      await fetchLogs();
+    } catch (error) {
+      console.error('Error logging operation:', error);
+    }
+  };
+
   const handlePushToMaster = async () => {
+    if (isProcessing) return;
+    
     try {
       setIsProcessing(true);
       setProgress(10);
       setCurrentOperation('Initializing git operation...');
+      await logOperation('started', 'Starting Git push operation');
       
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
@@ -66,7 +89,6 @@ const GitOperationsCard = () => {
       setProgress(30);
       setCurrentOperation('Authenticating with GitHub...');
 
-      // Query to check recent operations
       const { data: recentOps, error: queryError } = await supabase
         .from('git_operations_logs')
         .select('*')
@@ -92,24 +114,23 @@ const GitOperationsCard = () => {
 
       if (error) {
         console.error('Edge function error:', error);
+        await logOperation('failed', `Edge function error: ${error.message}`);
         throw error;
       }
 
-      setProgress(80);
-      setCurrentOperation('Finalizing push operation...');
-
       console.log('Push operation response:', data);
-
       setProgress(100);
+      await logOperation('completed', 'Successfully pushed to main');
+      
       toast({
         title: "Success",
         description: "Successfully pushed changes to master",
       });
 
-      // Refresh logs after operation
-      await fetchLogs();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Push error:', error);
+      await logOperation('failed', error.message || "Unknown error occurred");
+      
       toast({
         title: "Push Failed",
         description: error.message || "Failed to push changes. Please try again.",
@@ -145,13 +166,10 @@ const GitOperationsCard = () => {
         </Alert>
 
         {isProcessing && (
-          <div className="space-y-2">
-            <div className="flex justify-between text-sm text-dashboard-text">
-              <span>{currentOperation}</span>
-              <span>{progress}%</span>
-            </div>
-            <Progress value={progress} className="h-2" />
-          </div>
+          <GitOperationProgress 
+            currentOperation={currentOperation}
+            progress={progress}
+          />
         )}
 
         <Button
@@ -162,42 +180,7 @@ const GitOperationsCard = () => {
           {isProcessing ? "Processing..." : "Push to Master"}
         </Button>
 
-        <div className="mt-4">
-          <div className="flex items-center gap-2 mb-2">
-            <History className="w-4 h-4 text-dashboard-accent1" />
-            <h3 className="text-sm font-medium text-white">Recent Operations</h3>
-          </div>
-          <ScrollArea className="h-[200px] rounded-md border border-white/10">
-            <div className="p-4 space-y-2">
-              {logs.map((log) => (
-                <div
-                  key={log.id}
-                  className="text-sm p-2 rounded bg-dashboard-card/50 border border-white/10"
-                >
-                  <div className="flex justify-between text-white">
-                    <span>{log.operation_type}</span>
-                    <span className={`px-2 py-0.5 rounded-full text-xs ${
-                      log.status === 'completed' ? 'bg-green-500/20 text-green-400' :
-                      log.status === 'failed' ? 'bg-red-500/20 text-red-400' :
-                      'bg-yellow-500/20 text-yellow-400'
-                    }`}>
-                      {log.status}
-                    </span>
-                  </div>
-                  <p className="text-dashboard-muted text-xs mt-1">{log.message}</p>
-                  <p className="text-dashboard-muted text-xs mt-1">
-                    {new Date(log.created_at).toLocaleString()}
-                  </p>
-                </div>
-              ))}
-              {logs.length === 0 && (
-                <p className="text-dashboard-muted text-sm text-center py-4">
-                  No recent operations
-                </p>
-              )}
-            </div>
-          </ScrollArea>
-        </div>
+        <GitOperationLogs logs={logs} />
       </CardContent>
     </Card>
   );
