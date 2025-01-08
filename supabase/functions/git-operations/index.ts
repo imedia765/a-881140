@@ -81,6 +81,7 @@ serve(async (req) => {
     console.log('Fetching current branch state...');
     
     // Test GitHub token with a simple API call first
+    console.log('Testing GitHub token...');
     const testResponse = await fetch('https://api.github.com/user', {
       headers: {
         'Authorization': `token ${githubToken}`,
@@ -89,13 +90,16 @@ serve(async (req) => {
       }
     });
 
+    const testResponseText = await testResponse.text();
+    console.log('GitHub token test response:', testResponseText);
+
     if (!testResponse.ok) {
-      const testErrorText = await testResponse.text();
-      console.error('GitHub token validation failed:', testErrorText);
-      throw new Error(`GitHub token validation failed: ${testErrorText}`);
+      console.error('GitHub token test failed:', testResponseText);
+      throw new Error(`GitHub token validation failed: ${testResponseText}`);
     }
 
     // Get the latest commit SHA
+    console.log('Fetching branch information...');
     const response = await fetch(apiUrl, {
       headers: {
         'Authorization': `token ${githubToken}`,
@@ -109,7 +113,7 @@ serve(async (req) => {
 
     if (!response.ok) {
       console.error('GitHub API error:', responseText);
-      throw new Error(`GitHub API error: ${response.statusText}`);
+      throw new Error(`GitHub API error: ${responseText}`);
     }
 
     const data = JSON.parse(responseText);
