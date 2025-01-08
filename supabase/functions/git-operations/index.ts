@@ -51,7 +51,7 @@ serve(async (req) => {
       throw new Error('GitHub token not configured in Edge Function secrets');
     }
 
-    // Less strict token validation - only check if it's not empty
+    // Basic validation - just ensure token is not empty
     if (!githubToken.trim()) {
       console.error('Empty GitHub token');
       throw new Error('GitHub token cannot be empty');
@@ -83,7 +83,7 @@ serve(async (req) => {
     // Test GitHub token with a simple API call first
     const testResponse = await fetch('https://api.github.com/user', {
       headers: {
-        'Authorization': `Bearer ${githubToken}`,
+        'Authorization': `token ${githubToken}`,
         'Accept': 'application/vnd.github.v3+json',
         'User-Agent': 'Supabase-Edge-Function'
       }
@@ -98,7 +98,7 @@ serve(async (req) => {
     // Get the latest commit SHA
     const response = await fetch(apiUrl, {
       headers: {
-        'Authorization': `Bearer ${githubToken}`,
+        'Authorization': `token ${githubToken}`,
         'Accept': 'application/vnd.github.v3+json',
         'User-Agent': 'Supabase-Edge-Function'
       }
