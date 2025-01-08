@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Progress } from "@/components/ui/progress";
 import { supabase } from "@/integrations/supabase/client";
 
 interface GitOperationLog {
@@ -19,6 +20,8 @@ const GitOperationsCard = () => {
   const { toast } = useToast();
   const [isProcessing, setIsProcessing] = useState(false);
   const [logs, setLogs] = useState<GitOperationLog[]>([]);
+  const [currentOperation, setCurrentOperation] = useState('');
+  const [progress, setProgress] = useState(0);
 
   useEffect(() => {
     fetchLogs();
@@ -26,29 +29,60 @@ const GitOperationsCard = () => {
 
   const fetchLogs = async () => {
     try {
+      console.log('Fetching git operation logs...');
       const { data, error } = await supabase
         .from('git_operations_logs')
         .select('*')
         .order('created_at', { ascending: false })
         .limit(5);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching logs:', error);
+        throw error;
+      }
+      console.log('Fetched logs:', data);
       setLogs(data || []);
     } catch (error) {
       console.error('Error fetching logs:', error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch operation logs",
+        variant: "destructive",
+      });
     }
   };
 
   const handlePushToMaster = async () => {
     try {
       setIsProcessing(true);
+      setProgress(10);
+      setCurrentOperation('Initializing git operation...');
       
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
         throw new Error('No active session');
       }
 
-      // Get the GitHub token from Supabase secrets via the Edge Function
+      setProgress(30);
+      setCurrentOperation('Authenticating with GitHub...');
+
+      // Query to check recent operations
+      const { data: recentOps, error: queryError } = await supabase
+        .from('git_operations_logs')
+        .select('*')
+        .eq('status', 'completed')
+        .order('created_at', { ascending: false })
+        .limit(1);
+
+      if (queryError) {
+        console.error('Error checking recent operations:', queryError);
+      } else {
+        console.log('Recent successful operations:', recentOps);
+      }
+
+      setProgress(50);
+      setCurrentOperation('Preparing to push changes...');
+
       const { data, error } = await supabase.functions.invoke('git-operations', {
         body: {
           branch: 'main',
@@ -56,8 +90,17 @@ const GitOperationsCard = () => {
         }
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Edge function error:', error);
+        throw error;
+      }
 
+      setProgress(80);
+      setCurrentOperation('Finalizing push operation...');
+
+      console.log('Push operation response:', data);
+
+      setProgress(100);
       toast({
         title: "Success",
         description: "Successfully pushed changes to master",
@@ -74,6 +117,8 @@ const GitOperationsCard = () => {
       });
     } finally {
       setIsProcessing(false);
+      setCurrentOperation('');
+      setProgress(0);
     }
   };
 
@@ -98,6 +143,16 @@ const GitOperationsCard = () => {
             Using stored GitHub token from Supabase secrets. Make sure it's configured in the Edge Functions settings.
           </AlertDescription>
         </Alert>
+
+        {isProcessing && (
+          <div className="space-y-2">
+            <div className="flex justify-between text-sm text-dashboard-text">
+              <span>{currentOperation}</span>
+              <span>{progress}%</span>
+            </div>
+            <Progress value={progress} className="h-2" />
+          </div>
+        )}
 
         <Button
           onClick={handlePushToMaster}
