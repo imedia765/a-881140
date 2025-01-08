@@ -20,7 +20,8 @@ serve(async (req) => {
   try {
     console.log('Git operation started');
     
-    const supabaseClient = createClient(
+    // Create Supabase client
+    const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
@@ -32,7 +33,7 @@ serve(async (req) => {
       throw new Error('No authorization header');
     }
 
-    const { data: { user }, error: authError } = await supabaseClient.auth.getUser(
+    const { data: { user }, error: authError } = await supabase.auth.getUser(
       authHeader.replace('Bearer ', '')
     );
 
@@ -53,16 +54,14 @@ serve(async (req) => {
     const { branch = 'main', commitMessage = 'Force commit: Pushing all files to master' } = await req.json() as GitOperationRequest;
 
     // Log operation start
-    const { data: logEntry, error: logError } = await supabaseClient
+    const { error: logError } = await supabase
       .from('git_operations_logs')
       .insert({
         operation_type: 'push',
         status: 'started',
         created_by: user.id,
         message: 'Starting Git push operation'
-      })
-      .select()
-      .single();
+      });
 
     if (logError) {
       console.error('Error logging operation:', logError);
@@ -84,25 +83,26 @@ serve(async (req) => {
       }
     });
 
+    const responseText = await response.text();
+    console.log('GitHub API response:', responseText);
+
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error('GitHub API error:', errorText);
+      console.error('GitHub API error:', responseText);
       throw new Error(`GitHub API error: ${response.statusText}`);
     }
 
-    const data = await response.json();
-    console.log('Current branch state:', data);
+    const data = JSON.parse(responseText);
+    console.log('Current branch state:', JSON.stringify(data, null, 2));
 
     // Update log with success
-    if (logEntry?.id) {
-      await supabaseClient
-        .from('git_operations_logs')
-        .update({
-          status: 'completed',
-          message: `Successfully pushed to ${branch}`
-        })
-        .eq('id', logEntry.id);
-    }
+    await supabase
+      .from('git_operations_logs')
+      .insert({
+        operation_type: 'push',
+        status: 'completed',
+        created_by: user.id,
+        message: `Successfully pushed to ${branch}`
+      });
 
     return new Response(
       JSON.stringify({
@@ -118,16 +118,20 @@ serve(async (req) => {
   } catch (error) {
     console.error('Error in git-operations:', error);
 
+    // Create Supabase client for error logging
+    const supabase = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    );
+
     // Log the error
-    if (error instanceof Error) {
-      await supabaseClient
-        .from('git_operations_logs')
-        .insert({
-          operation_type: 'push',
-          status: 'failed',
-          message: error.message
-        });
-    }
+    await supabase
+      .from('git_operations_logs')
+      .insert({
+        operation_type: 'push',
+        status: 'failed',
+        message: error instanceof Error ? error.message : 'Unknown error occurred'
+      });
 
     return new Response(
       JSON.stringify({
