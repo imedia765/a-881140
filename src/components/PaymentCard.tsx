@@ -2,7 +2,7 @@ import { Card } from "@/components/ui/card";
 import { CircularProgressbar, buildStyles } from 'react-circular-progressbar';
 import 'react-circular-progressbar/dist/styles.css';
 import { format } from 'date-fns';
-import { AlertCircle, AlertOctagon, Check, Clock } from "lucide-react";
+import { AlertOctagon, Check, Clock } from "lucide-react";
 
 interface PaymentCardProps {
   annualPaymentStatus?: 'completed' | 'pending' | 'due' | 'overdue';
@@ -40,12 +40,12 @@ const PaymentCard = ({
     switch (status) {
       case 'completed':
         return 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30';
+      case 'pending':
+        return 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30';
       case 'due':
-        return 'bg-amber-500/20 text-amber-400 border border-amber-500/30';
+        return 'bg-blue-500/20 text-blue-400 border border-blue-500/30';
       case 'overdue':
         return 'bg-rose-500/20 text-rose-400 border border-rose-500/30';
-      case 'pending':
-        return 'bg-blue-500/20 text-blue-400 border border-blue-500/30';
       default:
         return 'bg-blue-500/20 text-blue-400 border border-blue-500/30';
     }
@@ -60,9 +60,9 @@ const PaymentCard = ({
       case 'overdue':
         return <AlertOctagon className="h-6 w-6" />;
       case 'pending':
-        return <AlertCircle className="h-6 w-6" />;
+        return <Clock className="h-6 w-6" />;
       default:
-        return <AlertCircle className="h-6 w-6" />;
+        return <Clock className="h-6 w-6" />;
     }
   };
 
@@ -75,7 +75,7 @@ const PaymentCard = ({
           <div className="flex items-center justify-between mb-4">
             <div>
               <p className="text-2xl font-bold text-white">£40</p>
-              <p className="text-sm font-bold" style={{ color: getStatusColor(annualPaymentStatus).split(' ')[1].replace('text-', '') }}>
+              <p className="text-lg font-bold text-dashboard-warning">
                 Due: {formatDate(annualPaymentDueDate)}
               </p>
               {lastAnnualPaymentDate && (
@@ -124,7 +124,7 @@ const PaymentCard = ({
               <p className="text-2xl font-bold text-white">
                 £{emergencyCollectionAmount}
               </p>
-              <p className="text-sm font-bold" style={{ color: getStatusColor(emergencyCollectionStatus).split(' ')[1].replace('text-', '') }}>
+              <p className="text-lg font-bold text-dashboard-warning">
                 Due: {formatDate(emergencyCollectionDueDate)}
               </p>
               {lastEmergencyPaymentDate && (

@@ -90,6 +90,33 @@ export type Database = {
         }
         Relationships: []
       }
+      git_operations_logs: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          id: string
+          message: string | null
+          operation_type: string
+          status: string
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          message?: string | null
+          operation_type: string
+          status: string
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          message?: string | null
+          operation_type?: string
+          status?: string
+        }
+        Relationships: []
+      }
       members: {
         Row: {
           address: string | null
@@ -258,6 +285,36 @@ export type Database = {
           phone?: string | null
           prefix?: string | null
           updated_at?: string
+        }
+        Relationships: []
+      }
+      monitoring_logs: {
+        Row: {
+          details: Json | null
+          event_type: Database["public"]["Enums"]["monitoring_event_type"]
+          id: string
+          metric_name: string
+          metric_value: number
+          severity: Database["public"]["Enums"]["severity_level"] | null
+          timestamp: string | null
+        }
+        Insert: {
+          details?: Json | null
+          event_type: Database["public"]["Enums"]["monitoring_event_type"]
+          id?: string
+          metric_name: string
+          metric_value: number
+          severity?: Database["public"]["Enums"]["severity_level"] | null
+          timestamp?: string | null
+        }
+        Update: {
+          details?: Json | null
+          event_type?: Database["public"]["Enums"]["monitoring_event_type"]
+          id?: string
+          metric_name?: string
+          metric_value?: number
+          severity?: Database["public"]["Enums"]["severity_level"] | null
+          timestamp?: string | null
         }
         Relationships: []
       }
@@ -446,6 +503,12 @@ export type Database = {
       app_role: "admin" | "collector" | "member"
       audit_operation: "create" | "update" | "delete"
       backup_operation_type: "backup" | "restore"
+      monitoring_event_type:
+        | "system_performance"
+        | "api_latency"
+        | "error_rate"
+        | "user_activity"
+        | "resource_usage"
       payment_method: "bank_transfer" | "cash"
       severity_level: "info" | "warning" | "error" | "critical"
     }
