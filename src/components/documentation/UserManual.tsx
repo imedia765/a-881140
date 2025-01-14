@@ -36,7 +36,7 @@ const UserManual = () => {
         </div>
 
         <div className="prose prose-invert max-w-none">
-          <p className="text-dashboard-text">
+          <p className="text-[#F1F0FB]">
             Welcome to PWA Burton - your comprehensive platform for managing membership, payments, and organizational operations. 
             This manual provides detailed guidance for all user roles within the system.
           </p>
