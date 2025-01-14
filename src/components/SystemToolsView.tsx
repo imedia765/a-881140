@@ -1,58 +1,47 @@
-import { useEffect } from 'react';
-import { useToast } from "@/hooks/use-toast";
-import { useQueryClient } from '@tanstack/react-query';
-import { useNavigate } from 'react-router-dom';
-import { supabase } from "@/integrations/supabase/client";
-import SystemHealthCheck from './system/SystemHealthCheck';
-import RoleManagementCard from './system/RoleManagementCard';
-import GitOperationsCard from './system/GitOperationsCard';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import SystemHealthCheck from "./system/SystemHealthCheck";
+import GitOperationsCard from "./system/GitOperationsCard";
+import RoleManagementCard from "./system/RoleManagementCard";
+import UserManual from "./documentation/UserManual";
+import AnnouncementsManager from "./system/AnnouncementsManager";
 
 const SystemToolsView = () => {
-  const { toast } = useToast();
-  const queryClient = useQueryClient();
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        const { data: { session }, error } = await supabase.auth.getSession();
-        if (error || !session) {
-          console.error('Auth error:', error);
-          toast({
-            title: "Authentication Error",
-            description: "Please sign in again",
-            variant: "destructive",
-          });
-          navigate('/login');
-          return;
-        }
-        queryClient.invalidateQueries({ queryKey: ['security_audit'] });
-        queryClient.invalidateQueries({ queryKey: ['member_number_check'] });
-      } catch (error) {
-        console.error('Session check error:', error);
-        toast({
-          title: "Session Error",
-          description: "Please sign in again",
-          variant: "destructive",
-        });
-        navigate('/login');
-      }
-    };
-    checkAuth();
-  }, [queryClient, toast, navigate]);
-
   return (
     <div className="space-y-8">
       <header>
         <h1 className="text-3xl font-medium mb-2 text-white">System Tools</h1>
-        <p className="text-dashboard-muted">Manage and monitor system health</p>
+        <p className="text-dashboard-muted">Manage system settings and monitor performance</p>
       </header>
 
-      <div className="grid gap-6">
-        <SystemHealthCheck />
-        <GitOperationsCard />
-        <RoleManagementCard />
-      </div>
+      <Tabs defaultValue="health" className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="health">System Health</TabsTrigger>
+          <TabsTrigger value="git">Git Operations</TabsTrigger>
+          <TabsTrigger value="roles">Role Management</TabsTrigger>
+          <TabsTrigger value="manual">User Manual</TabsTrigger>
+          <TabsTrigger value="announcements">Announcements</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="health" className="space-y-4">
+          <SystemHealthCheck />
+        </TabsContent>
+
+        <TabsContent value="git" className="space-y-4">
+          <GitOperationsCard />
+        </TabsContent>
+
+        <TabsContent value="roles" className="space-y-4">
+          <RoleManagementCard />
+        </TabsContent>
+
+        <TabsContent value="manual" className="space-y-4">
+          <UserManual />
+        </TabsContent>
+
+        <TabsContent value="announcements" className="space-y-4">
+          <AnnouncementsManager />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };
