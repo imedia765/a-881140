@@ -42,14 +42,23 @@ global.window.matchMedia = vi.fn().mockImplementation(query => ({
 }));
 
 // Create a wrapper with providers for testing
-export const renderWithProviders = (ui: ReactElement) => {
-  const queryClient = new QueryClient();
-  return render(
+const createWrapper = () => {
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      queries: {
+        retry: false,
+      },
+    },
+  });
+  
+  return ({ children }: { children: ReactElement }) => (
     <QueryClientProvider client={queryClient}>
-      {ui}
+      {children}
     </QueryClientProvider>
   );
 };
+
+export { createWrapper };
 
 // Cleanup after each test case
 afterEach(() => {
