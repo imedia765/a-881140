@@ -8,30 +8,28 @@ import {
   Wallet,
   LogOut
 } from "lucide-react";
-import { UserRole } from "@/hooks/useRoleAccess";
 import { useAuthSession } from "@/hooks/useAuthSession";
+import { useRoleAccess } from "@/hooks/useRoleAccess";
 
 interface SidePanelProps {
   onTabChange: (tab: string) => void;
-  userRole: UserRole;
 }
 
-const SidePanel = ({ onTabChange, userRole }: SidePanelProps) => {
-  console.log('SidePanel rendered with role:', userRole); // Debug log
-  
-  const isAdmin = userRole === 'admin';
-  const isCollector = userRole === 'collector';
-  console.log('Role checks:', { isAdmin, isCollector }); // Additional role checks log
-  
+const SidePanel = ({ onTabChange }: SidePanelProps) => {
   const { handleSignOut } = useAuthSession();
-
+  const { userRole, canAccessTab, hasRole } = useRoleAccess();
+  
+  console.log('SidePanel rendered with role:', userRole);
+  
   const handleLogoutClick = () => {
     handleSignOut(false);
   };
 
   const handleTabChange = (tab: string) => {
-    console.log('Tab change requested:', tab, 'Current role:', userRole); // Log tab changes
-    onTabChange(tab);
+    console.log('Tab change requested:', tab, 'Current role:', userRole);
+    if (canAccessTab(tab)) {
+      onTabChange(tab);
+    }
   };
 
   return (
@@ -56,7 +54,7 @@ const SidePanel = ({ onTabChange, userRole }: SidePanelProps) => {
             Overview
           </Button>
 
-          {(isAdmin || isCollector) && (
+          {(hasRole('admin') || hasRole('collector')) && (
             <Button
               variant="ghost"
               className="w-full justify-start gap-2 text-sm"
@@ -67,7 +65,7 @@ const SidePanel = ({ onTabChange, userRole }: SidePanelProps) => {
             </Button>
           )}
 
-          {isAdmin && (
+          {hasRole('admin') && (
             <>
               <Button
                 variant="ghost"
