@@ -2,11 +2,10 @@ import { create } from 'zustand';
 import { Database } from "@/integrations/supabase/types";
 
 type UserRole = Database['public']['Enums']['app_role'];
-type UserRoles = UserRole[];
 
 interface RoleState {
   userRole: UserRole | null;
-  userRoles: UserRoles | null;
+  userRoles: UserRole[] | null;
   isLoading: boolean;
   error: Error | null;
   permissions: {
@@ -17,7 +16,7 @@ interface RoleState {
     canManageCollectors: boolean;
   };
   setUserRole: (role: UserRole | null) => void;
-  setUserRoles: (roles: UserRoles | null) => void;
+  setUserRoles: (roles: UserRole[] | null) => void;
   setIsLoading: (loading: boolean) => void;
   setError: (error: Error | null) => void;
   setPermissions: (permissions: RoleState['permissions']) => void;
@@ -42,7 +41,7 @@ export const useRoleStore = create<RoleState>((set) => ({
   setPermissions: (permissions) => set({ permissions }),
 }));
 
-export const mapRolesToPermissions = (roles: UserRoles | null): RoleState['permissions'] => {
+export const mapRolesToPermissions = (roles: UserRole[] | null): RoleState['permissions'] => {
   const permissions = {
     canManageUsers: false,
     canCollectPayments: false,
