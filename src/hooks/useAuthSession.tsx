@@ -7,35 +7,44 @@ import { useQueryClient } from '@tanstack/react-query';
 export function useAuthSession() {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
   const handleSignOut = async (skipStorageClear = false) => {
+    // Prevent multiple logout attempts
+    if (isLoggingOut) {
+      console.log('Logout already in progress, skipping...');
+      return;
+    }
+
     try {
       console.log('Starting sign out process...');
+      setIsLoggingOut(true);
       setLoading(true);
       
       // Clear all queries first
+      console.log('Clearing query cache...');
       await queryClient.resetQueries();
       await queryClient.clear();
       
       // Only clear storage if not skipping (during login flow)
       if (!skipStorageClear) {
+        console.log('Clearing local storage...');
         localStorage.clear();
         sessionStorage.clear();
       }
       
       // Sign out from Supabase
+      console.log('Signing out from Supabase...');
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
       
       console.log('Sign out successful');
       setSession(null);
-      
-      // Add a small delay to ensure state is fully cleared
-      await new Promise(resolve => setTimeout(resolve, 100));
-      
-      // Redirect to login page
+
+      // Immediate redirect
+      console.log('Redirecting to login page...');
       window.location.href = '/login';
       
     } catch (error: any) {
@@ -50,6 +59,7 @@ export function useAuthSession() {
         variant: "destructive",
       });
     } finally {
+      setIsLoggingOut(false);
       setLoading(false);
     }
   };
@@ -78,6 +88,7 @@ export function useAuthSession() {
 
   useEffect(() => {
     let mounted = true;
+    let authSubscription: { data: { subscription: { unsubscribe: () => void } } };
 
     console.log('Initializing auth session...');
     
@@ -116,7 +127,7 @@ export function useAuthSession() {
       }
     };
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, currentSession) => {
+    authSubscription = supabase.auth.onAuthStateChange(async (event, currentSession) => {
       if (!mounted) return;
 
       console.log('Auth state changed:', {
@@ -125,9 +136,11 @@ export function useAuthSession() {
         userId: currentSession?.user?.id
       });
       
-      if (event === 'SIGNED_OUT' || event === 'TOKEN_REFRESHED' && !currentSession) {
+      if (event === 'SIGNED_OUT' || (event === 'TOKEN_REFRESHED' && !currentSession)) {
         console.log('User signed out or token refresh failed');
-        await handleSignOut();
+        if (window.location.pathname !== '/login') {
+          window.location.href = '/login';
+        }
         return;
       }
 
@@ -143,7 +156,9 @@ export function useAuthSession() {
 
     return () => {
       mounted = false;
-      subscription.unsubscribe();
+      if (authSubscription?.data?.subscription) {
+        authSubscription.data.subscription.unsubscribe();
+      }
     };
   }, [queryClient, toast]);
 

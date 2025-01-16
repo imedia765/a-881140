@@ -17,12 +17,21 @@ interface SidePanelProps {
 }
 
 const SidePanel = ({ onTabChange, userRole }: SidePanelProps) => {
+  console.log('SidePanel rendered with role:', userRole); // Debug log
+  
   const isAdmin = userRole === 'admin';
   const isCollector = userRole === 'collector';
+  console.log('Role checks:', { isAdmin, isCollector }); // Additional role checks log
+  
   const { handleSignOut } = useAuthSession();
 
   const handleLogoutClick = () => {
     handleSignOut(false);
+  };
+
+  const handleTabChange = (tab: string) => {
+    console.log('Tab change requested:', tab, 'Current role:', userRole); // Log tab changes
+    onTabChange(tab);
   };
 
   return (
@@ -41,7 +50,7 @@ const SidePanel = ({ onTabChange, userRole }: SidePanelProps) => {
           <Button
             variant="ghost"
             className="w-full justify-start gap-2 text-sm"
-            onClick={() => onTabChange('dashboard')}
+            onClick={() => handleTabChange('dashboard')}
           >
             <LayoutDashboard className="h-4 w-4" />
             Overview
@@ -51,7 +60,7 @@ const SidePanel = ({ onTabChange, userRole }: SidePanelProps) => {
             <Button
               variant="ghost"
               className="w-full justify-start gap-2 text-sm"
-              onClick={() => onTabChange('users')}
+              onClick={() => handleTabChange('users')}
             >
               <Users className="h-4 w-4" />
               Members
@@ -63,7 +72,7 @@ const SidePanel = ({ onTabChange, userRole }: SidePanelProps) => {
               <Button
                 variant="ghost"
                 className="w-full justify-start gap-2 text-sm"
-                onClick={() => onTabChange('financials')}
+                onClick={() => handleTabChange('financials')}
               >
                 <Wallet className="h-4 w-4" />
                 Collectors & Financials
@@ -72,7 +81,7 @@ const SidePanel = ({ onTabChange, userRole }: SidePanelProps) => {
               <Button
                 variant="ghost"
                 className="w-full justify-start gap-2 text-sm"
-                onClick={() => onTabChange('system')}
+                onClick={() => handleTabChange('system')}
               >
                 <Settings className="h-4 w-4" />
                 System
